@@ -1,0 +1,176 @@
+package com.example.azucarlatina
+
+import android.os.Bundle
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.fragment.app.FragmentActivity
+import androidx.activity.compose.setContent
+import androidx.biometric.BiometricPrompt
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import com.example.azucarlatina.ui.theme.AzucarLatinaTheme
+import kotlinx.coroutines.delay
+import java.util.concurrent.Executor
+
+class MainActivity : FragmentActivity() {
+    private lateinit var biometricPrompt: BiometricPrompt
+    private lateinit var promptInfo: BiometricPrompt.PromptInfo
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Configuración del BiometricPrompt
+        val executor: Executor = ContextCompat.getMainExecutor(this)
+        biometricPrompt = BiometricPrompt(
+            this,
+            executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    println("Autenticación exitosa con huella")
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    println("Autenticación fallida")
+                }
+            }
+        )
+
+        promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Iniciar sesión con huella")
+            .setSubtitle("Usa tu huella para entrar")
+            .setNegativeButtonText("Cancelar")
+            .build()
+
+        setContent {
+            AzucarLatinaTheme {
+                var showWelcome by remember { mutableStateOf(false) }
+
+                if (!showWelcome) {
+                    SplashScreen { showWelcome = true }
+                } else {
+                    WelcomeScreen(
+                        onLogin = { username, password ->
+                            println("Usuario: $username, Password: $password")
+                        },
+                        onBiometricLogin = {
+                            biometricPrompt.authenticate(promptInfo)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SplashScreen(onSplashFinished: () -> Unit) {
+    var showSplash by remember { mutableStateOf(true) }
+    var alphaValue by remember { mutableFloatStateOf(1f) }
+    val animatedAlpha by animateFloatAsState(targetValue = alphaValue)
+
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        delay(3000) // Duración del splash
+        alphaValue = 0f // Inicia fade-out
+        delay(1000) // Tiempo del fade-out
+        showSplash = false
+        onSplashFinished()
+    }
+
+    if (showSplash) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(animatedAlpha),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(R.raw.idea3_musica_mobile)
+                    .build(),
+                contentDescription = "Logo Azúcar Latina",
+            )
+        }
+    }
+}
+
+@Composable
+fun WelcomeScreen(
+    onLogin: (username: String, password: String) -> Unit,
+    onBiometricLogin: () -> Unit
+) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(top = 60.dp)
+        ) {
+            // Logo
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(R.drawable.azucarlogo) // nombre en minúsculas y guion bajo
+                    .build(),
+                contentDescription = "Logo Azúcar Latina",
+                modifier = Modifier
+                    .fillMaxWidth(0.5f)
+                    .aspectRatio(1f)
+            )
+
+            Spacer(modifier = Modifier.height(30.dp))
+
+            Text(
+                text = "Bienvenido a Azúcar Latina 🎶",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Usuario") },
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Contraseña") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(onClick = { onLogin(username, password) }) {
+                Text("Iniciar Sesión")
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Button(onClick = { onBiometricLogin() }) {
+                Text("Entrar con Huella")
+            }
+        }
+    }
+}
