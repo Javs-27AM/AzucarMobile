@@ -1,0 +1,114 @@
+package com.example.azucarlatina
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import kotlinx.coroutines.delay
+import com.example.azucarlatina.ui.theme.AzucarLatinaTheme
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            AzucarLatinaTheme {
+                var showWelcome by remember { mutableStateOf(false) }
+
+                if (!showWelcome) {
+                    SplashScreen { showWelcome = true }
+                } else {
+                    WelcomeScreen { username, password ->
+                        // Aquí puedes manejar el login real
+                        println("Usuario: $username, Password: $password")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SplashScreen(onSplashFinished: () -> Unit) {
+    var showSplash by remember { mutableStateOf(true) }
+    var alphaValue by remember { mutableFloatStateOf(1f) }
+    val animatedAlpha by animateFloatAsState(targetValue = alphaValue)
+
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        delay(5000) // Duración del splash
+        alphaValue = 0f // Inicia fade-out
+        delay(1000) // Tiempo del fade-out
+        showSplash = false
+        onSplashFinished()
+    }
+
+    if (showSplash) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(animatedAlpha),
+            contentAlignment = Alignment.Center
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(R.raw.idea3_musica_mobile) // GIF en res/raw
+                    .build(),
+                contentDescription = "Logo Azúcar Latina"
+            )
+        }
+    }
+}
+
+@Composable
+fun WelcomeScreen(onLogin: (username: String, password: String) -> Unit) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "Bienvenido a Azúcar Latina 🎶",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Usuario") }
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Contraseña") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(onClick = { onLogin(username, password) }) {
+                Text("Iniciar Sesión")
+            }
+        }
+    }
+}
